@@ -8,7 +8,7 @@
 import UIKit
 
 class AlertController: UIAlertController {
-
+    
     func action(task: Task?, completion: @escaping (String) -> Void) {
         let saveAction = UIAlertAction(title: "Save", style: .default) { _ in
             guard let newValue = self.textFields?.first?.text else { return }
@@ -25,5 +25,4 @@ class AlertController: UIAlertController {
             textField.text = task?.name
         }
     }
-
 }

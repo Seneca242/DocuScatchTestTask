@@ -6,12 +6,12 @@
 //
 
 import UIKit
+import SnapKit
 
 class TaskListVC: UIViewController {
     
     private lazy var tableView: UITableView = {
         let tableView = UITableView()
-        tableView.backgroundColor = .red
         tableView.delegate = self
         tableView.dataSource = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: cellID)
@@ -20,19 +20,27 @@ class TaskListVC: UIViewController {
     
     private let cellID = "cell"
     private var tasks: [Task] = []
-
+    
     override func viewDidLoad() {
         super.viewDidLoad()
         setupView()
+        setupConstraints()
         getData()
     }
     
     private func setupView() {
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: cellID)
+        view.addSubview(tableView)
+        tableView.register(TaskTableViewCell.self, forCellReuseIdentifier: cellID)
         view.backgroundColor = .white
         setupNavigationBar()
     }
-
+    
+    private func setupConstraints() {
+        tableView.snp.makeConstraints { make in
+            make.edges.equalTo(view.safeAreaLayoutGuide)
+        }
+    }
+    
     private func setupNavigationBar() {
         title = "Task List"
         navigationController?.navigationBar.prefersLargeTitles = true
@@ -42,12 +50,7 @@ class TaskListVC: UIViewController {
         navBarAppearance.configureWithOpaqueBackground()
         navBarAppearance.titleTextAttributes = [.foregroundColor: UIColor.white]
         navBarAppearance.largeTitleTextAttributes = [.foregroundColor: UIColor.white]
-        navBarAppearance.backgroundColor = UIColor(
-            displayP3Red: 21/255,
-            green: 101/255,
-            blue: 192/255,
-            alpha: 194/255
-        )
+        navBarAppearance.backgroundColor = .black
         navigationController?.navigationBar.standardAppearance = navBarAppearance
         navigationController?.navigationBar.scrollEdgeAppearance = navBarAppearance
         
@@ -74,7 +77,7 @@ class TaskListVC: UIViewController {
             )
         }
     }
-
+    
     private func getData() {
         StorageManager.shared.fetchData { result in
             switch result {
@@ -87,25 +90,30 @@ class TaskListVC: UIViewController {
     }
 }
 
-//MARK: - UITableViewDataSource
+// MARK: - UITableViewDataSource
 extension TaskListVC: UITableViewDataSource {
-
+    
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         tasks.count
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: cellID, for: indexPath)
+        guard let cell = tableView.dequeueReusableCell(withIdentifier: cellID, for: indexPath) as? TaskTableViewCell else { return UITableViewCell() }
         
         let task = tasks[indexPath.row]
         cell.textLabel?.text = task.name
+        
+        cell.checkBoxButton.isSelected = task.isCompleted
+        cell.checkBoxButton.addTarget(self, action: #selector(checkBoxTapped(_:)), for: .touchUpInside)
+        
         return cell
     }
-    
 }
 
-//MARK: - UITableViewDelegate
+// MARK: - UITableViewDelegate
 extension TaskListVC: UITableViewDelegate {
+    
+    // Edit task
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
         let task = tasks[indexPath.row]
@@ -114,6 +122,7 @@ extension TaskListVC: UITableViewDelegate {
         }
     }
     
+    // Delete task
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         let task = tasks[indexPath.row]
         
@@ -137,7 +146,7 @@ extension TaskListVC {
             message: "What do you want to do?",
             preferredStyle: .alert
         )
-
+        
         alert.action(task: task) { taskName in
             if let task = task, let completion = completion {
                 StorageManager.shared.edit(task, newName: taskName)
@@ -146,8 +155,19 @@ extension TaskListVC {
                 self.save(task: taskName)
             }
         }
-        
         present(alert, animated: true)
     }
+    
+    @objc private func checkBoxTapped(_ sender: UIButton) {
+            guard let cell = sender.superview?.superview as? TaskTableViewCell,
+                  let indexPath = tableView.indexPath(for: cell) else {
+                return
+            }
+            
+            let task = tasks[indexPath.row]
+            task.isCompleted.toggle()
+            cell.checkBoxButton.isSelected = task.isCompleted
+            StorageManager.shared.saveContext()
+        }
 }
 

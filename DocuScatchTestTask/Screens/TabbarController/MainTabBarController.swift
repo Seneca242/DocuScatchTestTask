@@ -50,8 +50,7 @@ class MainTabBarController: UITabBarController {
         } else {
             tabBar.isTranslucent = true
         }
-        tabBar.tintColor = .red
+        tabBar.tintColor = .black
         viewControllers = [taskListNavVC, CVNavVC]
     }
-
 }
